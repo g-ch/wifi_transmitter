@@ -1,0 +1,10 @@
+ObjectsInTracking objects
+geometry_msgs/Point32 vel_info
+visualization_msgs/Marker makers
+geometry_msgs/Pose local_pose
+std_msgs/Float64 detection_time
+std_msgs/Float64MultiArray cost_head_velocity
+std_msgs/Float64MultiArray cost_head_direction
+std_msgs/Float64MultiArray cost_head_objects
+std_msgs/Float64MultiArray cost_head_fluctuation
+std_msgs/Float64MultiArray cost_head_final
