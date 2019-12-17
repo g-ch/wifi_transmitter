@@ -190,7 +190,7 @@ int main( int argc, char **argv )
 
     //通过自己合成消息，直接发送
     ros::Subscriber objs_sub = ros_nh.subscribe("/mot/objects_in_tracking",1,objs_msg_cb);
-    ros::Subscriber point32_sub = ros_nh.subscribe("/place_velocity_info",1,point32_msg_cb);
+    ros::Subscriber point32_sub = ros_nh.subscribe("/place_velocity_info_corrected",1,point32_msg_cb);
     ros::Subscriber marker_sub = ros_nh.subscribe("/visualization_marker",1,marker_msg_cb);
     ros::Subscriber pose_sub = ros_nh.subscribe("/mavros/local_position/pose",1,pose_msg_cb);
     ros::Subscriber detection_time_sub = ros_nh.subscribe("/yolo_ros_real_pose/detection_time", 1, detectionTimeCallback);
