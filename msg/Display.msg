@@ -7,4 +7,5 @@ std_msgs/Float64MultiArray cost_head_velocity
 std_msgs/Float64MultiArray cost_head_direction
 std_msgs/Float64MultiArray cost_head_objects
 std_msgs/Float64MultiArray cost_head_fluctuation
+std_msgs/Float64MultiArray cost_head_update
 std_msgs/Float64MultiArray cost_head_final

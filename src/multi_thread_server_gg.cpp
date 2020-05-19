@@ -18,7 +18,7 @@
 #include <visualization_msgs/Marker.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/Pose.h>
-
+#include <nav_msgs/Odometry.h>
 //
 // 打开一个摄像头,然后通过socket发送,有三个线程
 // 1 用于打开摄像头并存到buffer
@@ -75,70 +75,64 @@ MultiThreadSocket send_pcl_socket(send_pcl,send_pcl_socket_port);
 MultiThreadSocket send_other_socket(send_float_data,send_fdata_socket_port);
 
 void objs_msg_cb(const wifi_transmitter::ObjectsInTracking::ConstPtr &msg){
-    other_ready = false;
     display_msg.objects = *msg;
-    other_ready = true;
     // display_msg.objects.header = msg->header;
     // display_msg.objects.result = msg->result;
 }
 
 void point32_msg_cb(const geometry_msgs::Point32::ConstPtr& msg){
-    other_ready = false;
     display_msg.vel_info = *msg;
-    other_ready = true;
 }
 
 void marker_msg_cb(const visualization_msgs::Marker::ConstPtr& msg){
-    other_ready = false;
     display_msg.makers = *msg;
-    other_ready = true;
 }
 
 void pose_msg_cb(const geometry_msgs::PoseStamped::ConstPtr& msg){
-    other_ready = false;
     display_msg.local_pose = msg->pose;
-    other_ready = true;
+}
+
+void sim_pose_msg_cb(const geometry_msgs::Pose::ConstPtr& msg){
+    display_msg.local_pose.position.x = -msg->position.y;
+    display_msg.local_pose.position.y = msg->position.x;
+    display_msg.local_pose.position.z = msg->position.z;
+
+    display_msg.local_pose.orientation.x = -msg->orientation.y;
+    display_msg.local_pose.orientation.y = msg->orientation.x;
+    display_msg.local_pose.orientation.z = msg->orientation.z;
+    display_msg.local_pose.orientation.w = msg->orientation.w;
 }
 
 void detectionTimeCallback(const std_msgs::Float64& msg){
-    other_ready = false;
     display_msg.detection_time = msg;
-    other_ready = true;
 }
 
 void costHeadVelocityCallback(const std_msgs::Float64MultiArray& msg){
-    other_ready = false;
     display_msg.cost_head_velocity = msg;
-    other_ready = true;
 }
 
 void costHeadDirectionCallback(const std_msgs::Float64MultiArray& msg){
-    other_ready = false;
     display_msg.cost_head_direction = msg;
-    other_ready = true;
 }
 
 void costHeadObjectsCallback(const std_msgs::Float64MultiArray& msg){
-    other_ready = false;
     display_msg.cost_head_objects = msg;
-    other_ready = true;
 }
 
 void costHeadFluctuationCallback(const std_msgs::Float64MultiArray& msg){
-    other_ready = false;
     display_msg.cost_head_fluctuation = msg;
-    other_ready = true;
 }
 
 void costHeadFinalCallback(const std_msgs::Float64MultiArray& msg){
-    other_ready = false;
     display_msg.cost_head_final = msg;
-    other_ready = true;
+}
+
+void costHeadUpdateCallback(const std_msgs::Float64MultiArray& msg){
+    display_msg.cost_head_update = msg;
 }
 
 
 void general_ros_message_callback(const topic_tools::ShapeShifter::ConstPtr& msg){
-    pcl_cloud_ready = false;
     src_buffer_size = msg->size();
     std::vector<u_char> src_buffer;
     // copy raw memory into the buffer
@@ -152,8 +146,6 @@ void general_ros_message_callback(const topic_tools::ShapeShifter::ConstPtr& msg
                                                           src_buffer_size,
                                                           max_compressed_buffer_size);
     compressed_buffer.resize(compressed_data_size);
-    pcl_cloud_ready = true;
-
     // ROS_INFO_STREAM("MD5: "<<msg->getMD5Sum()<<" data type"<<msg->getDataType()<<" msg def size: "<< msg->getMessageDefinition().size());
     // ROS_INFO_STREAM("check size: "<<src_buffer_size<<"compressed size "<<compressed_data_size);
 }
@@ -179,6 +171,19 @@ void other_message_compress(const T& msg){
     // ROS_INFO_STREAM("check size: "<<src_buffer_size<<"compressed size "<<compressed_data_size);
 }
 
+
+void timerCallback(const ros::TimerEvent& e){
+    static int send_which_one = 0;
+    if(send_which_one == 0){
+        other_ready = true;
+        send_which_one = 1;
+    }else{
+        pcl_cloud_ready = true;
+        send_which_one = 0;
+    }
+}
+
+
 /* @function main */
 int main( int argc, char **argv )
 {
@@ -186,20 +191,24 @@ int main( int argc, char **argv )
     ros::NodeHandle ros_nh;
 
     //直接通过订阅通用消息发送
-    ros::Subscriber pcl_subscriber = ros_nh.subscribe("/ring_buffer/cloud_ob",1,general_ros_message_callback);
+    ros::Subscriber pcl_subscriber = ros_nh.subscribe("/ring_buffer/cloud_ob",5,general_ros_message_callback);
 
     //通过自己合成消息，直接发送
-    ros::Subscriber objs_sub = ros_nh.subscribe("/mot/objects_in_tracking",1,objs_msg_cb);
-    ros::Subscriber point32_sub = ros_nh.subscribe("/place_velocity_info_corrected",1,point32_msg_cb);
-    ros::Subscriber marker_sub = ros_nh.subscribe("/visualization_marker",1,marker_msg_cb);
-    ros::Subscriber pose_sub = ros_nh.subscribe("/mavros/local_position/pose",1,pose_msg_cb);
-    ros::Subscriber detection_time_sub = ros_nh.subscribe("/yolo_ros_real_pose/detection_time", 1, detectionTimeCallback);
+    ros::Subscriber objs_sub = ros_nh.subscribe("/mot/objects_in_tracking_predicted",2,objs_msg_cb);
+    ros::Subscriber point32_sub = ros_nh.subscribe("/place_velocity_info_corrected",2,point32_msg_cb);
+    ros::Subscriber marker_sub = ros_nh.subscribe("/visualization_marker",2,marker_msg_cb);
+    // ros::Subscriber pose_sub = ros_nh.subscribe("/mavros/local_position/pose",1,pose_msg_cb);
+    ros::Subscriber pose_sub = ros_nh.subscribe("/iris/ground_truth/pose",2,sim_pose_msg_cb); // For simulation
+    ros::Subscriber detection_time_sub = ros_nh.subscribe("/yolo_ros_real_pose/detection_time", 2, detectionTimeCallback);
 
-    ros::Subscriber cost_head_velocity_sub = ros_nh.subscribe("/head_cost/cost_head_velocity", 1, costHeadVelocityCallback);
-    ros::Subscriber cost_head_direction_sub = ros_nh.subscribe("/head_cost/cost_head_direction", 1, costHeadDirectionCallback);
-    ros::Subscriber cost_head_objects_sub = ros_nh.subscribe("/head_cost/cost_head_objects", 1, costHeadObjectsCallback);
-    ros::Subscriber cost_head_fluctuation_sub = ros_nh.subscribe("/head_cost/cost_head_fluctuation", 1, costHeadFluctuationCallback);
-    ros::Subscriber cost_head_final_sub = ros_nh.subscribe("/head_cost/cost_head_final", 1, costHeadFinalCallback);
+    ros::Subscriber cost_head_velocity_sub = ros_nh.subscribe("/head_cost/cost_head_velocity", 2, costHeadVelocityCallback);
+    ros::Subscriber cost_head_direction_sub = ros_nh.subscribe("/head_cost/cost_head_direction", 2, costHeadDirectionCallback);
+    ros::Subscriber cost_head_objects_sub = ros_nh.subscribe("/head_cost/cost_head_objects", 2, costHeadObjectsCallback);
+    ros::Subscriber cost_head_fluctuation_sub = ros_nh.subscribe("/head_cost/cost_head_fluctuation", 2, costHeadFluctuationCallback);
+    ros::Subscriber cost_head_final_sub = ros_nh.subscribe("/head_cost/cost_head_final", 2, costHeadFinalCallback);
+    ros::Subscriber cost_head_update_sub = ros_nh.subscribe("/head_cost/cost_head_update", 2, costHeadUpdateCallback);
+
+    ros::Timer timer1 = ros_nh.createTimer(ros::Duration(0.1), timerCallback); // RATE 3 Hz to publish
 
     std::thread send_pcl_socket_thread(send_pcl_func);
     std::thread send_other_socket_thread(send_other_func);
@@ -308,7 +317,12 @@ void send_pcl_func(){
         // package number and last package size
         while (pcl_cloud_ready) {
             const u_char * test_ptr = &compressed_buffer[0];
-            send_frame_test(test_ptr);
+            try{
+                send_frame_test(test_ptr);
+            }catch(int e){
+                std::cout << " an error occured when sending point cloud!" << std::endl;
+            }
+
             usleep(10e3);
             pcl_cloud_ready = false;
         }
@@ -326,9 +340,14 @@ void send_other_func(){
     while(ros::ok()){
         // package number and last package size
         while (other_ready) {
-            other_message_compress(display_msg);
-            const u_char * other_test_ptr = &compressed_other_buffer[0];
-            send_other_test(other_test_ptr);
+            try{            
+                other_message_compress(display_msg);
+                const u_char * other_test_ptr = &compressed_other_buffer[0];
+                send_other_test(other_test_ptr);            
+            }catch(int e){
+                std::cout << " an error occured when sending other informations!" << std::endl;
+            }
+
             usleep(10e3);
             other_ready = false;
         }

@@ -20,8 +20,8 @@ using namespace cv;
 
 // 配合服务器端程序接收
 
-// #define server_addr "127.0.0.1" //在本机测试用这个地址，如果连接其他电脑需要更换IP
-string server_addr = "192.168.1.145";
+string server_addr = "127.0.0.1"; //在本机测试用这个地址，如果连接其他电脑需要更换IP
+// string server_addr = "192.168.1.145";
 const string topic_name = "/ring_buffer/cloud_ob/transfered";
 const string other_topic_name = "/Display/transfered";
 int recv_pcl_socket_port = 10001;
