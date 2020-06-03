@@ -121,12 +121,13 @@ void recv_pcl_func(u_char * size_buffer,u_char * buffer,ros::NodeHandle nh){
                         ros::Publisher publisher = shapeshifted_msg.advertise(nh, topic_name, 1, true);
                         auto res = publishers_.insert( std::make_pair(topic_name, publisher) );
                         pub_it = res.first;
+                        pub_it->second.publish(shapeshifted_msg);
                     }
                 }
                 else{
                     ROS_INFO_STREAM("[pcl]error data chk_size: "<<check_size<<" decompressed size:"<<decompressed_size);
                 }
-                pub_it->second.publish(shapeshifted_msg);
+
             }
         }
         ros::spinOnce();
