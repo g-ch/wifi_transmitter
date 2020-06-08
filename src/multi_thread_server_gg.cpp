@@ -44,8 +44,8 @@ UDP套接口
         口，并立即返回给调用进程.
 */
 
-#define send_pcl_socket_port 10001
-#define send_fdata_socket_port 20002
+#define send_pcl_socket_port 12668
+#define send_fdata_socket_port 12669
 #define DisplayMsg wifi_transmitter::Display
 #define SEND_INTERVAL 1
 
@@ -61,6 +61,9 @@ int max_compressed_buffer_size;
 int compressed_data_size;
 std::vector<u_char> compressed_buffer;
 bool pcl_cloud_ready = false;
+bool pcl_message_received = false;
+
+bool pcl_data_locked = false;
 
 //used for other msg
 int other_buffer_size;
@@ -68,6 +71,8 @@ int max_compressed_other_buffer_size;
 int compressed_other_data_size;
 std::vector<u_char> compressed_other_buffer;
 bool other_ready = false;
+bool other_message_received = false;
+
 DisplayMsg display_msg;
 
 
@@ -76,20 +81,24 @@ MultiThreadSocket send_other_socket(send_float_data,send_fdata_socket_port);
 
 void objs_msg_cb(const wifi_transmitter::ObjectsInTracking::ConstPtr &msg){
     display_msg.objects = *msg;
+    other_message_received = true;
     // display_msg.objects.header = msg->header;
     // display_msg.objects.result = msg->result;
 }
 
 void point32_msg_cb(const geometry_msgs::Point32::ConstPtr& msg){
     display_msg.vel_info = *msg;
+    other_message_received = true;
 }
 
 void marker_msg_cb(const visualization_msgs::Marker::ConstPtr& msg){
     display_msg.makers = *msg;
+    other_message_received = true;
 }
 
 void pose_msg_cb(const geometry_msgs::PoseStamped::ConstPtr& msg){
     display_msg.local_pose = msg->pose;
+    other_message_received = true;
 }
 
 void sim_pose_msg_cb(const geometry_msgs::Pose::ConstPtr& msg){
@@ -101,6 +110,7 @@ void sim_pose_msg_cb(const geometry_msgs::Pose::ConstPtr& msg){
     display_msg.local_pose.orientation.y = msg->orientation.x;
     display_msg.local_pose.orientation.z = msg->orientation.z;
     display_msg.local_pose.orientation.w = msg->orientation.w;
+    other_message_received = true;
 }
 
 void detectionTimeCallback(const std_msgs::Float64& msg){
@@ -133,21 +143,30 @@ void costHeadUpdateCallback(const std_msgs::Float64MultiArray& msg){
 
 
 void general_ros_message_callback(const topic_tools::ShapeShifter::ConstPtr& msg){
-    src_buffer_size = msg->size();
-    std::vector<u_char> src_buffer;
-    // copy raw memory into the buffer
-    src_buffer.resize(src_buffer_size);
-    ros::serialization::OStream stream(src_buffer.data(), src_buffer_size);
-    msg->write(stream);
-    max_compressed_buffer_size = LZ4_compressBound(src_buffer_size);
-    compressed_buffer.resize(max_compressed_buffer_size);
-    compressed_data_size = LZ4_compress_default(reinterpret_cast<const char*>(src_buffer.data()),
-                                                          reinterpret_cast<char*>(compressed_buffer.data()),
-                                                          src_buffer_size,
-                                                          max_compressed_buffer_size);
-    compressed_buffer.resize(compressed_data_size);
-    // ROS_INFO_STREAM("MD5: "<<msg->getMD5Sum()<<" data type"<<msg->getDataType()<<" msg def size: "<< msg->getMessageDefinition().size());
-    // ROS_INFO_STREAM("check size: "<<src_buffer_size<<"compressed size "<<compressed_data_size);
+
+    if(!pcl_data_locked){
+        pcl_data_locked = true;
+
+        src_buffer_size = msg->size();
+        std::vector<u_char> src_buffer;
+        // copy raw memory into the buffer
+        src_buffer.resize(src_buffer_size);
+        ros::serialization::OStream stream(src_buffer.data(), src_buffer_size);
+        msg->write(stream);
+        max_compressed_buffer_size = LZ4_compressBound(src_buffer_size);
+        compressed_buffer.resize(max_compressed_buffer_size);
+        compressed_data_size = LZ4_compress_default(reinterpret_cast<const char*>(src_buffer.data()),
+                                                              reinterpret_cast<char*>(compressed_buffer.data()),
+                                                              src_buffer_size,
+                                                              max_compressed_buffer_size);
+        compressed_buffer.resize(compressed_data_size);
+
+        pcl_message_received = true;
+        // ROS_INFO_STREAM("MD5: "<<msg->getMD5Sum()<<" data type"<<msg->getDataType()<<" msg def size: "<< msg->getMessageDefinition().size());
+        //ROS_INFO_STREAM("check size: "<<src_buffer_size<<"compressed size "<<compressed_data_size);
+        pcl_data_locked = false;
+    }
+    
 }
 
 template <typename T>
@@ -175,11 +194,15 @@ void other_message_compress(const T& msg){
 void timerCallback(const ros::TimerEvent& e){
     static int send_which_one = 0;
     if(send_which_one == 0){
-        other_ready = true;
-        send_which_one = 1;
+        if(other_message_received){
+            other_ready = true;
+            if(pcl_message_received) {send_which_one = 1;}
+        }
     }else{
-        pcl_cloud_ready = true;
-        send_which_one = 0;
+        if(pcl_message_received){
+            pcl_cloud_ready = true;
+            if(other_message_received) {send_which_one = 0;}
+        }
     }
 }
 
@@ -197,8 +220,8 @@ int main( int argc, char **argv )
     ros::Subscriber objs_sub = ros_nh.subscribe("/mot/objects_in_tracking_predicted",2,objs_msg_cb);
     ros::Subscriber point32_sub = ros_nh.subscribe("/place_velocity_info_corrected",2,point32_msg_cb);
     ros::Subscriber marker_sub = ros_nh.subscribe("/visualization_marker",2,marker_msg_cb);
-    // ros::Subscriber pose_sub = ros_nh.subscribe("/mavros/local_position/pose",1,pose_msg_cb);
-    ros::Subscriber pose_sub = ros_nh.subscribe("/iris/ground_truth/pose",2,sim_pose_msg_cb); // For simulation
+    ros::Subscriber pose_sub = ros_nh.subscribe("/mavros/local_position/pose",1,pose_msg_cb);  // For real world
+    // ros::Subscriber pose_sub = ros_nh.subscribe("/iris/ground_truth/pose",2,sim_pose_msg_cb); // For simulation
     ros::Subscriber detection_time_sub = ros_nh.subscribe("/yolo_ros_real_pose/detection_time", 2, detectionTimeCallback);
 
     ros::Subscriber cost_head_velocity_sub = ros_nh.subscribe("/head_cost/cost_head_velocity", 2, costHeadVelocityCallback);
@@ -315,16 +338,20 @@ void send_pcl_func(){
     ROS_INFO_STREAM("[server PCl]Client Connected");
     while(ros::ok()){
         // package number and last package size
-        while (pcl_cloud_ready) {
+        while (pcl_cloud_ready && !pcl_data_locked) {
+
+            pcl_data_locked = true;
             const u_char * test_ptr = &compressed_buffer[0];
             try{
                 send_frame_test(test_ptr);
+                std::cout << "Pcl data sended!" << std::endl;
             }catch(int e){
                 std::cout << " an error occured when sending point cloud!" << std::endl;
             }
 
             usleep(10e3);
             pcl_cloud_ready = false;
+            pcl_data_locked = false;
         }
         ros::spinOnce();
     }

@@ -20,12 +20,12 @@ using namespace cv;
 
 // 配合服务器端程序接收
 
-string server_addr = "127.0.0.1"; //在本机测试用这个地址，如果连接其他电脑需要更换IP
-// string server_addr = "192.168.1.145";
+//string server_addr = "127.0.0.1"; //在本机测试用这个地址，如果连接其他电脑需要更换IP
+string server_addr = "192.168.1.182";
 const string topic_name = "/ring_buffer/cloud_ob/transfered";
 const string other_topic_name = "/Display/transfered";
-int recv_pcl_socket_port = 10001;
-int recv_fdata_socket_port = 20002;
+int recv_pcl_socket_port = 12668;
+int recv_fdata_socket_port = 12669;
 // u_char recv_fdata_buf[10];//content buff area
 
 int src_buffer_size;
@@ -87,7 +87,7 @@ void recv_pcl_func(u_char * size_buffer,u_char * buffer,ros::NodeHandle nh){
                 int last_pkg_bytes = size_buffer[6]*256 + size_buffer[7];
                 long int total_size = (pkg_num-1)*1024 + last_pkg_bytes;
                 std::vector<u_char> compressed_buffer(total_size);
-                std::vector<char> decompressed_buffer(check_size);
+                std::vector<char> decompressed_buffer(check_size + 65535);  ///CHG + 65535
 
                 for(int i=0; i<pkg_num; i++)
                 {
@@ -104,10 +104,10 @@ void recv_pcl_func(u_char * size_buffer,u_char * buffer,ros::NodeHandle nh){
                                                                   decompressed_buffer.data(),
                                                                   compressed_buffer.size(),
                                                                   check_size);
-                ros::serialization::IStream stream( reinterpret_cast<uint8_t*>(decompressed_buffer.data()), decompressed_buffer.size() );
+                ros::serialization::IStream stream( reinterpret_cast<uint8_t*>(decompressed_buffer.data()), check_size); //decompressed_buffer.size()  to check_size, CHG
                 shapeshifted_msg.read(stream);
                 // ROS_INFO_STREAM("check size: "<< check_size<<" total_size :"<<total_size);
-                // ROS_INFO_STREAM("[pcl] check size: "<< check_size<<" msg_size :"<<shapeshifted_msg.size());
+                ROS_INFO_STREAM("[pcl] check size: "<< check_size<<" msg_size :"<<shapeshifted_msg.size());
                 // shapeshifted_msg.morph(sample_md5,datatype,defination,"");
                 shapeshifted_msg.morph(
                         ros::message_traits::MD5Sum<PCLmsgtype>::value(),
@@ -123,6 +123,7 @@ void recv_pcl_func(u_char * size_buffer,u_char * buffer,ros::NodeHandle nh){
                         pub_it = res.first;
                         pub_it->second.publish(shapeshifted_msg);
                     }
+		    else{pub_it->second.publish(shapeshifted_msg);}
                 }
                 else{
                     ROS_INFO_STREAM("[pcl]error data chk_size: "<<check_size<<" decompressed size:"<<decompressed_size);
@@ -130,6 +131,10 @@ void recv_pcl_func(u_char * size_buffer,u_char * buffer,ros::NodeHandle nh){
 
             }
         }
+        else{
+             ROS_INFO_STREAM("[pcl]error received an empty package. recv_len="<<recv_len);
+        }
+	
         ros::spinOnce();
     }
 }
