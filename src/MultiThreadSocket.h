@@ -30,7 +30,8 @@ class MultiThreadSocket {
 private:
     int _port = -1;
     std::string _address = "127.0.0.1";
-    float _send_delay = 0;
+    long long _send_delay = 1000;
+    long long _receive_delay = 50;
     bool _connected = false;
     bool _socket_inited = false;
     socket_type _current_socket_type;
@@ -45,13 +46,17 @@ public :
     MultiThreadSocket(socket_type _type,int port);
     struct sockaddr_in c_in{}; //used for recev
     struct sockaddr_in s_in{}; //used for send
-    int set_send_delay(int ms);
+    int set_send_delay(int us);
+    int set_receive_delay(int us);
+
     void set_address(std::string addr);
     bool hrt_check_enabled = false;
     bool socket_is_init();
     std::string get_address();
     socket_type get_socket_type();
     int get_send_delay();
+    int get_receive_delay();
+
     int get_socket_fd();
     int init_socket(int domain = AF_INET, int type = SOCK_DGRAM, int protocol = IPPROTO_UDP);
     int socket_connect();

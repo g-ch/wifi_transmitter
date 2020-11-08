@@ -34,8 +34,12 @@ MultiThreadSocket::MultiThreadSocket(socket_type _type, int port) {
 }
 
 // 修改发送间隔时间
-int MultiThreadSocket::set_send_delay(int ms = 1){
-    return _send_delay = ms;
+int MultiThreadSocket::set_send_delay(int us = 1){
+    return _send_delay = us;
+}
+
+int MultiThreadSocket::set_receive_delay(int us = 1){
+    return _receive_delay = us;
 }
 
 // 设置地址
@@ -63,6 +67,10 @@ socket_type MultiThreadSocket::get_socket_type() {
 
 int MultiThreadSocket::get_send_delay() {
     return _send_delay;
+}
+
+int MultiThreadSocket::get_receive_delay() {
+    return _receive_delay;
 }
 
 int MultiThreadSocket::get_socket_fd() {
@@ -97,7 +105,7 @@ int MultiThreadSocket::init_socket(int domain, int type, int protocol) {
 
 int MultiThreadSocket::socket_connect() {
     _connected = connect(get_socket_fd(), (struct sockaddr *) &s_in, sizeof(struct sockaddr)) == 0;
-    usleep(get_send_delay()*1e3);
+    usleep(get_send_delay());
     return _connected;
 
 }
@@ -139,7 +147,7 @@ int MultiThreadSocket::receive_msg(void* buf,int size) {
 //        if(_connected_to_server){
 //            socklen_t len = sizeof(c_in);
 //            int _size =  recvfrom(get_socket_fd(), buf, size, 0, (struct sockaddr*)&c_in, &len);
-//            usleep(get_send_delay()*1e3);
+//            usleep(get_receive_delay());
 //            if(_size>0){
 //                u_char buffer[8] = "qqqqqqq";
 //                no_check_send_msg(buffer,8);
@@ -159,8 +167,12 @@ int MultiThreadSocket::receive_msg(void* buf,int size) {
 
 int MultiThreadSocket::no_check_receive_msg(void* buf,int size) {
     socklen_t len = sizeof(c_in);
-    int _size =  recvfrom(get_socket_fd(), buf, size, 0, (struct sockaddr*)&c_in, &len);
-    usleep(get_send_delay()*1e3);
+    int _size = -1;
+    for(int time_out_counter = 0; time_out_counter < 10; time_out_counter++){
+        _size =  recvfrom(get_socket_fd(), buf, size, 0, (struct sockaddr*)&c_in, &len);
+        usleep(get_receive_delay());
+        if(_size > 0) break;
+    }
     return _size;
 }
 
@@ -192,7 +204,7 @@ int MultiThreadSocket::send_msg(void* buf,int size) {
 //            }else{
 //                _size = sendto(get_socket_fd(), buf, size, 0, (struct sockaddr *)&s_in,sizeof(struct sockaddr));
 //            }
-//            usleep(get_send_delay()*1e3);
+//            usleep(get_send_delay());
 //            if(_size>0){
 //                u_char buffer[8];
 //                _connected_to_client = true;
@@ -218,7 +230,7 @@ int MultiThreadSocket::no_check_send_msg(void* buf,int size) {
     }else{
         _size = sendto(get_socket_fd(), buf, size, 0, (struct sockaddr *)&s_in,sizeof(struct sockaddr));
     }
-    usleep(get_send_delay()*1e3);
+    usleep(get_send_delay());
     return _size;
 }
 
