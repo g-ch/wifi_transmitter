@@ -21,7 +21,7 @@ using namespace cv;
 // 配合服务器端程序接收
 
 //string server_addr = "127.0.0.1"; //在本机测试用这个地址，如果连接其他电脑需要更换IP
-string server_addr = "192.168.100.104";
+string server_addr = "192.168.100.110";
 const string topic_name = "/ring_buffer/cloud_ob/transfered";
 const string other_topic_name = "/Display/transfered";
 int recv_pcl_socket_port = 12668;
@@ -98,11 +98,6 @@ void recv_pcl_func(u_char * size_buffer,u_char * buffer,ros::NodeHandle nh){
                         compressed_buffer[1024*i+j] = buffer[j];
                     // 显示图像
                 }
-
-                /* Send heart beat*/
-                usleep(1e3);
-                recv_pcl_socket.send_heartbeat();
-
                 /*decode and show*/
                 usleep(10e3);
                 const int decompressed_size = LZ4_decompress_safe(reinterpret_cast<const char*>(compressed_buffer.data()),
@@ -128,7 +123,7 @@ void recv_pcl_func(u_char * size_buffer,u_char * buffer,ros::NodeHandle nh){
                         pub_it = res.first;
                         pub_it->second.publish(shapeshifted_msg);
                     }
-		            else{pub_it->second.publish(shapeshifted_msg);}
+		    else{pub_it->second.publish(shapeshifted_msg);}
                 }
                 else{
                     ROS_INFO_STREAM("[pcl]error data chk_size: "<<check_size<<" decompressed size:"<<decompressed_size);
@@ -180,11 +175,6 @@ void recv_other_func(u_char * size_buffer,u_char * buffer,ros::NodeHandle nh){
                         compressed_buffer[1024*i+j] = buffer[j];
                     // 显示图像
                 }
-
-                /* Send heart beat*/
-                usleep(1e3);
-                recv_other_socket.send_heartbeat();
-
                 /*decode and show*/
                 usleep(10e3);
                 const int other_decompressed_size = LZ4_decompress_safe(reinterpret_cast<const char*>(compressed_buffer.data()),

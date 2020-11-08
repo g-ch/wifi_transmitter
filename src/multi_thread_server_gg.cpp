@@ -10,7 +10,6 @@
 #include <lz4.h>
 #include <std_msgs/Float64MultiArray.h>
 
-
 //订阅消息include文件
 #include <wifi_transmitter/Display.h>
 #include <wifi_transmitter/ObjectsInTracking.h>
@@ -214,24 +213,24 @@ int main( int argc, char **argv )
     ros::NodeHandle ros_nh;
 
     //直接通过订阅通用消息发送
-    ros::Subscriber pcl_subscriber = ros_nh.subscribe("/ring_buffer/cloud_ob",5,general_ros_message_callback);
+    ros::Subscriber pcl_subscriber = ros_nh.subscribe("/ring_buffer/cloud_ob",1,general_ros_message_callback);
 
     //通过自己合成消息，直接发送
-    ros::Subscriber objs_sub = ros_nh.subscribe("/mot/objects_in_tracking_predicted",2,objs_msg_cb);
-    ros::Subscriber point32_sub = ros_nh.subscribe("/place_velocity_info_corrected",2,point32_msg_cb);
-    ros::Subscriber marker_sub = ros_nh.subscribe("/visualization_marker",2,marker_msg_cb);
+    ros::Subscriber objs_sub = ros_nh.subscribe("/mot/objects_in_tracking_predicted",1,objs_msg_cb);
+    ros::Subscriber point32_sub = ros_nh.subscribe("/place_velocity_info_corrected",1,point32_msg_cb);
+    ros::Subscriber marker_sub = ros_nh.subscribe("/visualization_marker",1,marker_msg_cb);
     ros::Subscriber pose_sub = ros_nh.subscribe("/mavros/local_position/pose",1,pose_msg_cb);  // For real world
-    // ros::Subscriber pose_sub = ros_nh.subscribe("/iris/ground_truth/pose",2,sim_pose_msg_cb); // For simulation
-    ros::Subscriber detection_time_sub = ros_nh.subscribe("/yolo_ros_real_pose/detection_time", 2, detectionTimeCallback);
+    // ros::Subscriber pose_sub = ros_nh.subscribe("/iris/ground_truth/pose",1,sim_pose_msg_cb); // For simulation
+    ros::Subscriber detection_time_sub = ros_nh.subscribe("/yolo_ros_real_pose/detection_time", 1, detectionTimeCallback);
 
-    ros::Subscriber cost_head_velocity_sub = ros_nh.subscribe("/head_cost/cost_head_velocity", 2, costHeadVelocityCallback);
-    ros::Subscriber cost_head_direction_sub = ros_nh.subscribe("/head_cost/cost_head_direction", 2, costHeadDirectionCallback);
-    ros::Subscriber cost_head_objects_sub = ros_nh.subscribe("/head_cost/cost_head_objects", 2, costHeadObjectsCallback);
-    ros::Subscriber cost_head_fluctuation_sub = ros_nh.subscribe("/head_cost/cost_head_fluctuation", 2, costHeadFluctuationCallback);
-    ros::Subscriber cost_head_final_sub = ros_nh.subscribe("/head_cost/cost_head_final", 2, costHeadFinalCallback);
-    ros::Subscriber cost_head_update_sub = ros_nh.subscribe("/head_cost/cost_head_update", 2, costHeadUpdateCallback);
+    ros::Subscriber cost_head_velocity_sub = ros_nh.subscribe("/head_cost/cost_head_velocity", 1, costHeadVelocityCallback);
+    ros::Subscriber cost_head_direction_sub = ros_nh.subscribe("/head_cost/cost_head_direction", 1, costHeadDirectionCallback);
+    ros::Subscriber cost_head_objects_sub = ros_nh.subscribe("/head_cost/cost_head_objects", 1, costHeadObjectsCallback);
+    ros::Subscriber cost_head_fluctuation_sub = ros_nh.subscribe("/head_cost/cost_head_fluctuation", 1, costHeadFluctuationCallback);
+    ros::Subscriber cost_head_final_sub = ros_nh.subscribe("/head_cost/cost_head_final", 1, costHeadFinalCallback);
+    ros::Subscriber cost_head_update_sub = ros_nh.subscribe("/head_cost/cost_head_update", 1, costHeadUpdateCallback);
 
-    ros::Timer timer1 = ros_nh.createTimer(ros::Duration(0.1), timerCallback); // RATE 3 Hz to publish
+    ros::Timer timer1 = ros_nh.createTimer(ros::Duration(0.25), timerCallback); // RATE 4 Hz to publish
 
     std::thread send_pcl_socket_thread(send_pcl_func);
     std::thread send_other_socket_thread(send_other_func);
@@ -267,7 +266,7 @@ void send_frame_test(const u_char * send_compressed_pcl_buffer){
     buffer[2] = (u_char)font;
     buffer[3] = (u_char)(back/256);
     buffer[4] = (u_char)(back%256);
-    buffer[5] = (unsigned char) pkg_num; //255k at most
+    buffer[5] = (unsigned char) pkg_num; //255k at most ///Too large?
     buffer[6] = (unsigned char) (last_pkg_bytes / 256);
     buffer[7] = (unsigned char) (last_pkg_bytes % 256);
     //send size msg
@@ -285,7 +284,22 @@ void send_frame_test(const u_char * send_compressed_pcl_buffer){
         }
         send_pcl_socket.send_msg(send_buffer);
     }
+
+    /// Check connection
+    static int failure_times = 0;
+    bool if_connected = send_pcl_socket.receive_heartbeat();
+    if(!if_connected){
+        failure_times ++;
+        if(failure_times > 3){
+            send_pcl_socket.restart_connection();
+            failure_times = 0;
+        }
+    }else{
+        failure_times = 0;
+    }
 }
+
+
 void send_other_test(const u_char * send_compressed_pcl_buffer){
     int decompressed_data_size = other_buffer_size;
     int font = decompressed_data_size/1024;
@@ -328,15 +342,32 @@ void send_other_test(const u_char * send_compressed_pcl_buffer){
         }
         send_other_socket.send_msg(send_buffer);
     }
+
+    /// Check connection
+    static int failure_times = 0;
+    bool if_connected = send_other_socket.receive_heartbeat();
+    if(!if_connected){
+        failure_times ++;
+        if(failure_times > 3){
+            send_other_socket.restart_connection();
+            failure_times = 0;
+        }
+    }else{
+        failure_times = 0;
+    }
+
 }
 void send_pcl_func(){
     ROS_INFO_STREAM("Send PCl thread Opend....");
-    while (!send_pcl_socket.is_connected_to_client()){
-        ROS_INFO_STREAM("[server PCl]Waiting for Client Connect...");
-        send_pcl_socket.wait_client_connect();
-    }
-    ROS_INFO_STREAM("[server PCl]Client Connected");
+
     while(ros::ok()){
+        while (!send_pcl_socket.is_connected_to_client()){
+            ROS_INFO_STREAM("[server PCl]Waiting for Client Connect...");
+            send_pcl_socket.wait_client_connect();
+            usleep(10e3);
+            ros::spinOnce();
+        }
+//        ROS_INFO_STREAM("[server PCl]Client Connected");
         // package number and last package size
         while (pcl_cloud_ready && !pcl_data_locked) {
 
@@ -359,12 +390,13 @@ void send_pcl_func(){
 
 void send_other_func(){
     ROS_INFO_STREAM("Send other thread Opend....");
-    while (!send_other_socket.is_connected_to_client()){
-        ROS_INFO_STREAM("[server other]Waiting for Client Connect...");
-        send_other_socket.wait_client_connect();
-    }
-    ROS_INFO_STREAM("[server other]Client Connected");
     while(ros::ok()){
+
+        while (!send_other_socket.is_connected_to_client()){
+            ROS_INFO_STREAM("[server other]Waiting for Client Connect...");
+            send_other_socket.wait_client_connect();
+        }
+
         // package number and last package size
         while (other_ready) {
             try{            

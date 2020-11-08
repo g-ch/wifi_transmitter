@@ -76,7 +76,7 @@ int MultiThreadSocket::init_socket(int domain, int type, int protocol) {
         s_in.sin_port = htons(_port);//change port to netchar
         _socket_fd = socket(domain,type,protocol);
         bind(_socket_fd,(struct sockaddr *)&s_in,sizeof(struct sockaddr));
-        timeval tv = {1, 0};// 设置超时时间1s
+        timeval tv = {0, 500000};// 设置超时时间0.5s
         setsockopt(_socket_fd, SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, sizeof(timeval));
         int nRecvBuf=64*1024;//设置为64K
         setsockopt(_socket_fd,SOL_SOCKET,SO_RCVBUF,(const char*)&nRecvBuf,sizeof(int));
@@ -86,7 +86,7 @@ int MultiThreadSocket::init_socket(int domain, int type, int protocol) {
         s_in.sin_addr.s_addr=inet_addr(_address.c_str());//accept any address
         _socket_fd = socket(domain,type,protocol);
         //设置超时时间
-        timeval tv = {1, 0};// 设置超时时间1s
+        timeval tv = {0, 500000};// 设置超时时间0.5s
         setsockopt(_socket_fd, SOL_SOCKET, SO_RCVTIMEO, (char*)&tv, sizeof(timeval));
         // 设置接收缓冲
         int nRecvBuf=64*1024;//设置为64K
@@ -135,25 +135,25 @@ void MultiThreadSocket::wait_client_connect(){
 
 // 使用try catch
 int MultiThreadSocket::receive_msg(void* buf,int size) {
-    if(hrt_check_enabled){
-        if(_connected_to_server){
-            socklen_t len = sizeof(c_in);
-            int _size =  recvfrom(get_socket_fd(), buf, size, 0, (struct sockaddr*)&c_in, &len);
-            usleep(get_send_delay()*1e3);
-            if(_size>0){
-                u_char buffer[8] = "qqqqqqq";
-                no_check_send_msg(buffer,8);
-            }else{
-                _connected_to_server = false;
-            }
-            return _size;
-        } else{
-            connect_to_server();
-        }
-    }
-    else{
-        no_check_receive_msg(buf,size);
-    }
+//    if(hrt_check_enabled){
+//        if(_connected_to_server){
+//            socklen_t len = sizeof(c_in);
+//            int _size =  recvfrom(get_socket_fd(), buf, size, 0, (struct sockaddr*)&c_in, &len);
+//            usleep(get_send_delay()*1e3);
+//            if(_size>0){
+//                u_char buffer[8] = "qqqqqqq";
+//                no_check_send_msg(buffer,8);
+//            }else{
+//                _connected_to_server = false;
+//            }
+//            return _size;
+//        } else{
+//            connect_to_server();
+//        }
+//    }
+//    else{
+        return no_check_receive_msg(buf,size);
+//    }
 }
 
 
@@ -164,32 +164,49 @@ int MultiThreadSocket::no_check_receive_msg(void* buf,int size) {
     return _size;
 }
 
+void MultiThreadSocket::send_heartbeat() {
+    u_char buffer[8] = "qqqqqqq";
+    no_check_send_msg(buffer,8);
+}
+
+bool MultiThreadSocket::receive_heartbeat() {
+    u_char buffer[8];
+    return no_check_receive_msg(buffer, sizeof(buffer)) == 8;
+}
+
+void MultiThreadSocket::restart_connection(){
+    _connected_to_client = false;
+    close_socket();
+    usleep(1e5);
+    init_socket();
+}
+
 // 使用try catch
 int MultiThreadSocket::send_msg(void* buf,int size) {
-    if(hrt_check_enabled){
-        if(_connected_to_client){
-            socklen_t len = sizeof(struct sockaddr);
-            int _size;
-            if(_current_socket_type==send_float_data||_current_socket_type==send_pcl) {
-                _size = sendto(get_socket_fd(), buf, size, 0, (struct sockaddr *)&c_in,sizeof(struct sockaddr));
-            }else{
-                _size = sendto(get_socket_fd(), buf, size, 0, (struct sockaddr *)&s_in,sizeof(struct sockaddr));
-            }
-            usleep(get_send_delay()*1e3);
-            if(_size>0){
-                u_char buffer[8];
-                _connected_to_client = true;
-                if(no_check_receive_msg(buffer, sizeof(buffer))!=8){
-                    _connected_to_client = false;
-                }
-            }
-            return _size;
-        } else{
-            wait_client_connect();
-        }
-    } else{
-        no_check_send_msg(buf,size);
-    }
+//    if(hrt_check_enabled){
+//        if(_connected_to_client){
+//            socklen_t len = sizeof(struct sockaddr);
+//            int _size;
+//            if(_current_socket_type==send_float_data||_current_socket_type==send_pcl) {
+//                _size = sendto(get_socket_fd(), buf, size, 0, (struct sockaddr *)&c_in,sizeof(struct sockaddr));
+//            }else{
+//                _size = sendto(get_socket_fd(), buf, size, 0, (struct sockaddr *)&s_in,sizeof(struct sockaddr));
+//            }
+//            usleep(get_send_delay()*1e3);
+//            if(_size>0){
+//                u_char buffer[8];
+//                _connected_to_client = true;
+//                if(no_check_receive_msg(buffer, sizeof(buffer))!=8){
+//                    _connected_to_client = false;
+//                }
+//            }
+//            return _size;
+//        } else{
+//            wait_client_connect();
+//        }
+//    } else{
+    return no_check_send_msg(buf,size);
+//    }
 }
 
 // 使用try catch

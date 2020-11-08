@@ -68,7 +68,14 @@ public :
     int no_check_receive_msg(void *buf, int size);
 
     int no_check_send_msg(void *buf, int size);
-};
+
+    void send_heartbeat();
+
+    bool receive_heartbeat();
+
+    void restart_connection();
+
+    };
 
 
 #endif //SRC_MULTITHREADSOCKET_H
