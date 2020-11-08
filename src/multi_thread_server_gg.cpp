@@ -213,8 +213,8 @@ int main( int argc, char **argv )
     ros::NodeHandle ros_nh;
 
     //直接通过订阅通用消息发送
-//    ros::Subscriber pcl_subscriber = ros_nh.subscribe("/ring_buffer/cloud_ob",1,general_ros_message_callback);
-    ros::Subscriber pcl_subscriber = ros_nh.subscribe("/ring_buffer/edf",1,general_ros_message_callback);
+    ros::Subscriber pcl_subscriber = ros_nh.subscribe("/ring_buffer/cloud_ob",1,general_ros_message_callback);
+//    ros::Subscriber pcl_subscriber = ros_nh.subscribe("/ring_buffer/edf",1,general_ros_message_callback);
 
     //通过自己合成消息，直接发送
     ros::Subscriber objs_sub = ros_nh.subscribe("/mot/objects_in_tracking_predicted",1,objs_msg_cb);
