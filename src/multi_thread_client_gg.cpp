@@ -99,9 +99,9 @@ void recv_pcl_func(u_char * size_buffer,u_char * buffer,ros::NodeHandle nh){
                     // 显示图像
                 }
 
-                /* Send heart beat*/
-                usleep(100);
-                recv_pcl_socket.send_heartbeat();
+//                /* Send heart beat*/
+//                usleep(100);
+//                recv_pcl_socket.send_heartbeat();
 
                 /*decode and show*/
                 usleep(1e3);

@@ -262,7 +262,6 @@ void send_frame_test(const u_char * send_compressed_pcl_buffer){
     memset(buffer,0, sizeof(buffer));
 
     /*send frame information*/
-    static unsigned char send_counter = 0;
     buffer[0] = 'c';
     buffer[1] = 'h';
     buffer[2] = (u_char)font;
@@ -287,20 +286,18 @@ void send_frame_test(const u_char * send_compressed_pcl_buffer){
         }
         send_pcl_socket.send_msg(send_buffer);
     }
-
-    /// Check connection
-    static int failure_times = 0;
-    bool if_connected = send_pcl_socket.receive_heartbeat();
-    if(!if_connected){
-        failure_times ++;
-        if(failure_times > 3){
-            send_pcl_socket.restart_connection();
-            failure_times = 0;
-        }
-    }else{
-        failure_times = 0;
-    }
-    send_counter == 0;
+//    /// Check connection
+//    static int failure_times = 0;
+//    bool if_connected = send_pcl_socket.receive_heartbeat();
+//    if(!if_connected){
+//        failure_times ++;
+//        if(failure_times > 3){
+//            send_pcl_socket.restart_connection();
+//            failure_times = 0;
+//        }
+//    }else{
+//        failure_times = 0;
+//    }
 }
 
 
