@@ -78,7 +78,9 @@ void recv_pcl_func(u_char * size_buffer,u_char * buffer,ros::NodeHandle nh){
             ROS_ERROR("[client PCl] Receive Msg Error ... Receive Next Msg....");
         }
         if(recv_len>0){
-            if(size_buffer[0]=='c' && size_buffer[1]=='h'){
+            if(size_buffer[0]==3 && size_buffer[1]==4 && size_buffer[2]==2 && size_buffer[3]==0 && size_buffer[4]==6 && size_buffer[5]==4 && size_buffer[6]==1 && size_buffer[7]==2){
+                recv_pcl_socket.receive_msg(size_buffer, 8);
+                int seq = size_buffer[1];
                 int font = size_buffer[2];
                 int back = size_buffer[3]*256+size_buffer[4];
                 int check_size = (font-1)*1024+back;
@@ -100,11 +102,13 @@ void recv_pcl_func(u_char * size_buffer,u_char * buffer,ros::NodeHandle nh){
                 }
 
                 /* Send heart beat*/
-                usleep(1e3);
-                recv_pcl_socket.send_heartbeat();
+                if(seq == 10){
+                    usleep(100);
+                    recv_pcl_socket.send_heartbeat();
+                }
 
                 /*decode and show*/
-                usleep(10e3);
+                usleep(1e3);
                 const int decompressed_size = LZ4_decompress_safe(reinterpret_cast<const char*>(compressed_buffer.data()),
                                                                   decompressed_buffer.data(),
                                                                   compressed_buffer.size(),
@@ -160,7 +164,9 @@ void recv_other_func(u_char * size_buffer,u_char * buffer,ros::NodeHandle nh){
             ROS_ERROR("[client other] Receive Msg Error ... Receive Next Msg....");
         }
         if(recv_len>0){
-            if(size_buffer[0]=='c' && size_buffer[1]=='h'){
+            if(size_buffer[0]==3 && size_buffer[1]==4 && size_buffer[2]==2 && size_buffer[3]==0 && size_buffer[4]==6 && size_buffer[5]==4 && size_buffer[6]==1 && size_buffer[7]==2){
+                recv_pcl_socket.receive_msg(size_buffer, 8);
+                int seq = size_buffer[1];
                 int font = size_buffer[2];
                 int back = size_buffer[3]*256+size_buffer[4];
                 int check_size = (font-1)*1024+back;
@@ -182,11 +188,13 @@ void recv_other_func(u_char * size_buffer,u_char * buffer,ros::NodeHandle nh){
                 }
 
                 /* Send heart beat*/
-                usleep(1e3);
-                recv_other_socket.send_heartbeat();
+                if(seq==10){
+                    usleep(100);
+                    recv_other_socket.send_heartbeat();
+                }
 
                 /*decode and show*/
-                usleep(10e3);
+                usleep(1e3);
                 const int other_decompressed_size = LZ4_decompress_safe(reinterpret_cast<const char*>(compressed_buffer.data()),
                                                                   decompressed_buffer.data(),
                                                                   compressed_buffer.size(),
