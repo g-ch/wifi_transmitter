@@ -185,7 +185,6 @@ void recv_other_func(u_char * size_buffer,u_char * buffer,ros::NodeHandle nh){
                 usleep(100);
                 recv_other_socket.send_heartbeat();
 
-
                 /*decode and show*/
                 usleep(1e3);
                 const int other_decompressed_size = LZ4_decompress_safe(reinterpret_cast<const char*>(compressed_buffer.data()),

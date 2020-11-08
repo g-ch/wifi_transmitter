@@ -261,8 +261,8 @@ void send_frame_test(const u_char * send_compressed_pcl_buffer){
     unsigned char buffer[8];
     memset(buffer,0, sizeof(buffer));
 
-
     /*send frame information*/
+    static unsigned char send_counter = 0;
     buffer[0] = 'c';
     buffer[1] = 'h';
     buffer[2] = (u_char)font;
@@ -300,7 +300,7 @@ void send_frame_test(const u_char * send_compressed_pcl_buffer){
     }else{
         failure_times = 0;
     }
-
+    send_counter == 0;
 }
 
 
@@ -322,6 +322,7 @@ void send_other_test(const u_char * send_compressed_pcl_buffer){
     }
     unsigned char buffer[8];
     memset(buffer,0, sizeof(buffer));
+
 
     /*send mark*/
     buffer[0] = 'c';
