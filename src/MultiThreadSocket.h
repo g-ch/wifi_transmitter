@@ -31,7 +31,7 @@ private:
     int _port = -1;
     std::string _address = "127.0.0.1";
     long long _send_delay = 50;
-    long long _receive_delay = 10;
+    long long _receive_delay = 30;
     bool _connected = false;
     bool _socket_inited = false;
     socket_type _current_socket_type;

@@ -100,11 +100,11 @@ void recv_pcl_func(u_char * size_buffer,u_char * buffer,ros::NodeHandle nh){
                 }
 
                 /* Send heart beat*/
-                usleep(1e3);
+                usleep(100);
                 recv_pcl_socket.send_heartbeat();
 
                 /*decode and show*/
-                usleep(10e3);
+                usleep(1e3);
                 const int decompressed_size = LZ4_decompress_safe(reinterpret_cast<const char*>(compressed_buffer.data()),
                                                                   decompressed_buffer.data(),
                                                                   compressed_buffer.size(),
@@ -182,11 +182,12 @@ void recv_other_func(u_char * size_buffer,u_char * buffer,ros::NodeHandle nh){
                 }
 
                 /* Send heart beat*/
-                usleep(1e3);
+                usleep(100);
                 recv_other_socket.send_heartbeat();
 
+
                 /*decode and show*/
-                usleep(10e3);
+                usleep(1e3);
                 const int other_decompressed_size = LZ4_decompress_safe(reinterpret_cast<const char*>(compressed_buffer.data()),
                                                                   decompressed_buffer.data(),
                                                                   compressed_buffer.size(),

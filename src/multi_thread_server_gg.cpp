@@ -261,6 +261,7 @@ void send_frame_test(const u_char * send_compressed_pcl_buffer){
     unsigned char buffer[8];
     memset(buffer,0, sizeof(buffer));
 
+
     /*send frame information*/
     buffer[0] = 'c';
     buffer[1] = 'h';
@@ -272,6 +273,7 @@ void send_frame_test(const u_char * send_compressed_pcl_buffer){
     buffer[7] = (unsigned char) (last_pkg_bytes % 256);
     //send size msg
     send_pcl_socket.send_msg(buffer, sizeof(buffer));
+
     //send buffer msg
     unsigned char send_buffer[1024];
     for(int j=0; j<pkg_num; j++)
@@ -298,6 +300,7 @@ void send_frame_test(const u_char * send_compressed_pcl_buffer){
     }else{
         failure_times = 0;
     }
+
 }
 
 
@@ -319,6 +322,7 @@ void send_other_test(const u_char * send_compressed_pcl_buffer){
     }
     unsigned char buffer[8];
     memset(buffer,0, sizeof(buffer));
+
     /*send mark*/
     buffer[0] = 'c';
     buffer[1] = 'h';
@@ -330,6 +334,7 @@ void send_other_test(const u_char * send_compressed_pcl_buffer){
     buffer[7] = (unsigned char) (last_pkg_bytes % 256);
     //send size msg
     send_other_socket.send_msg(buffer, sizeof(buffer));
+
     //send buffer msg
     unsigned char send_buffer[1024];
     for(int j=0; j<pkg_num; j++)
@@ -356,8 +361,8 @@ void send_other_test(const u_char * send_compressed_pcl_buffer){
     }else{
         failure_times = 0;
     }
-
 }
+
 void send_pcl_func(){
     ROS_INFO_STREAM("Send PCl thread Opend....");
 
