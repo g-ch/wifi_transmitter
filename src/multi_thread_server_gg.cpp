@@ -261,19 +261,6 @@ void send_frame_test(const u_char * send_compressed_pcl_buffer){
     unsigned char buffer[8];
     memset(buffer,0, sizeof(buffer));
 
-    /*send mark*/
-    /*send frame information*/
-    buffer[0] = 3;
-    buffer[1] = 4;
-    buffer[2] = 2;
-    buffer[3] = 0;
-    buffer[4] = 6;
-    buffer[5] = 4;
-    buffer[6] = 1;
-    buffer[7] = 2;
-    //send size msg
-    send_pcl_socket.send_msg(buffer, sizeof(buffer));
-
     /*send frame information*/
     buffer[0] = 'c';
     buffer[1] = 'h';
