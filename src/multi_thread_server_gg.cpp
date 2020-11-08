@@ -213,7 +213,8 @@ int main( int argc, char **argv )
     ros::NodeHandle ros_nh;
 
     //直接通过订阅通用消息发送
-    ros::Subscriber pcl_subscriber = ros_nh.subscribe("/ring_buffer/cloud_ob",1,general_ros_message_callback);
+//    ros::Subscriber pcl_subscriber = ros_nh.subscribe("/ring_buffer/cloud_ob",1,general_ros_message_callback);
+    ros::Subscriber pcl_subscriber = ros_nh.subscribe("/ring_buffer/edf",1,general_ros_message_callback);
 
     //通过自己合成消息，直接发送
     ros::Subscriber objs_sub = ros_nh.subscribe("/mot/objects_in_tracking_predicted",1,objs_msg_cb);
@@ -286,18 +287,18 @@ void send_frame_test(const u_char * send_compressed_pcl_buffer){
         }
         send_pcl_socket.send_msg(send_buffer);
     }
-//    /// Check connection
-//    static int failure_times = 0;
-//    bool if_connected = send_pcl_socket.receive_heartbeat();
-//    if(!if_connected){
-//        failure_times ++;
-//        if(failure_times > 3){
-//            send_pcl_socket.restart_connection();
-//            failure_times = 0;
-//        }
-//    }else{
-//        failure_times = 0;
-//    }
+    /// Check connection
+    static int failure_times = 0;
+    bool if_connected = send_pcl_socket.receive_heartbeat();
+    if(!if_connected){
+        failure_times ++;
+        if(failure_times > 3){
+            send_pcl_socket.restart_connection();
+            failure_times = 0;
+        }
+    }else{
+        failure_times = 0;
+    }
 }
 
 
