@@ -271,7 +271,7 @@ void send_frame_test(const u_char * send_compressed_pcl_buffer){
     buffer[6] = 1;
     buffer[7] = 2;
     //send size msg
-    send_other_socket.send_msg(buffer, sizeof(buffer));
+    send_pcl_socket.send_msg(buffer, sizeof(buffer));
 
     /*send frame information*/
     static unsigned char send_counter = 0;

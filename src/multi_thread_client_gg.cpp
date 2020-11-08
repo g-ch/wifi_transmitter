@@ -165,7 +165,7 @@ void recv_other_func(u_char * size_buffer,u_char * buffer,ros::NodeHandle nh){
         }
         if(recv_len>0){
             if(size_buffer[0]==3 && size_buffer[1]==4 && size_buffer[2]==2 && size_buffer[3]==0 && size_buffer[4]==6 && size_buffer[5]==4 && size_buffer[6]==1 && size_buffer[7]==2){
-                recv_pcl_socket.receive_msg(size_buffer, 8);
+                recv_other_socket.receive_msg(size_buffer, 8);
                 int seq = size_buffer[1];
                 int font = size_buffer[2];
                 int back = size_buffer[3]*256+size_buffer[4];
